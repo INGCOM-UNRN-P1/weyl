@@ -52,3 +52,31 @@ def test_cli_main_block(monkeypatch):
         weyl.cli.main()
     except SystemExit as e:
         assert e.code == 0
+
+
+def test_cli_doctor():
+    res = runner.invoke(app, ["doctor"])
+    assert res.exit_code == 0
+    assert "Diagnóstico del Entorno WEYL" in res.stdout
+
+
+def test_cli_side_by_side_and_track(tmp_path):
+    r1 = tmp_path / "r1"
+    r2 = tmp_path / "r2"
+    r1.mkdir()
+    r2.mkdir()
+
+    f1 = r1 / "calc.c"
+    f1.write_text("int f(int x) { return x; }\n")
+    f2 = r2 / "calc.c"
+    f2.write_text("int f(int x) { return x + 1; }\n")
+
+    res_sbs = runner.invoke(app, ["diff", str(f1), str(f2), "--side-by-side"])
+    assert res_sbs.exit_code == 0
+    assert "Estudiante" in res_sbs.stdout
+
+    res_track = runner.invoke(app, ["track", str(r1), str(r2)])
+    assert res_track.exit_code == 0
+    assert "Seguimiento Evolutivo" in res_track.stdout
+    assert "MODIFICADA" in res_track.stdout
+

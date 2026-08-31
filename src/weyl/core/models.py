@@ -25,10 +25,17 @@ class ReporteSemanticDiff:
     total_funciones_modelo: int
     funciones: List[DiferenciaFuncion] = field(default_factory=list)
 
+    @property
+    def similitud_global(self) -> float:
+        if not self.funciones:
+            return 1.0
+        return sum(f.similitud for f in self.funciones) / len(self.funciones)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "archivo_estudiante": str(self.archivo_estudiante),
             "archivo_modelo": str(self.archivo_modelo),
+            "similitud_global": round(self.similitud_global, 2),
             "total_funciones_estudiante": self.total_funciones_estudiante,
             "total_funciones_modelo": self.total_funciones_modelo,
             "diferencias": [
@@ -41,3 +48,4 @@ class ReporteSemanticDiff:
                 for f in self.funciones
             ],
         }
+
