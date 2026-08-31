@@ -352,3 +352,12 @@ Podés encadenar `weyl` con otras herramientas del ecosistema en una única lín
 weyl diff src/lista.c canon/lista.c --threshold 0.85
 ````
 
+---
+
+(manual-weyl-seccion-plugins)=
+## 9. Extensión, Desarrollo de Plugins y API Python
+
+Para crear tus propias reglas, conectores de evaluación o integrar `weyl` programáticamente en pipelines de CI/CD:
+
+- 👉 **Consultá la guía completa:** [Guía de Extensión y Creación de Plugins](plugins.md)
+
