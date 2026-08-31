@@ -181,3 +181,53 @@ check-weyl:
 ````
 
 Ejecutá `make check-weyl` antes de cada commit para asegurar que tu código conserve el estado de aprobación.
+
+---
+
+(manual-weyl-arquitectura)=
+## 7. Arquitectura Interna y Mecanismo Técnico
+
+La herramienta **`weyl`** implementa un motor de alta precisión basado en:
+
+- **Tecnología Núcleo:** `Tree-Sitter C AST Structural Normalizer + Levenshtein AST Distance Calculator + Canonical Diff Engine`.
+- **Aislamiento y Determinismo:** Diseñada para operar sin efectos colaterales en entornos de integración continua (CI), terminales de estudiantes y servidores docentes headless.
+- **Manejo de Errores Pedagógico:** Todo fallo de sintaxis, memoria o lógica se traduce en una acción prescriptiva concreta con su respectiva justificación técnica.
+
+---
+
+(manual-weyl-ecosistema)=
+## 8. Integración y Conexión con el Ecosistema
+
+````{note}
+Ninguna herramienta opera de forma aislada. **`weyl`** forma parte del pipeline integral de evaluación, verificación y enseñanza de la cátedra.
+````
+
+### Diagrama de Flujo e Interoperabilidad
+
+````{mermaid}
+graph TD
+    EST[Entrega del Estudiante] --> WEY[Weyl: Diffing Semántico]
+    CAN[Solución Canónica Docente] --> WEY
+    WEY -->|Normalización de Nombres/Espacios| AST[Tree-Sitter AST Normalizer]
+    WEY -->|Equivalencia Estructural| DRD[Dredd: Autograding Masivo]
+    WEY -->|Verificación de APIs| DKD[Deckard: Banco Canónico]
+````
+
+### Matriz de Intercambio de Datos
+
+| Canal | Herramientas Conectadas | Tipo de Datos Transferidos |
+| :--- | :--- | :--- |
+| **Entradas (Inputs)** | - `Entrega del estudiante y solución canónica docente` | Código fuente, AST, binarios, testcases, contratos |
+| **Salidas (Outputs)** | - `dredd (similitud semántica y funciones faltantes)`
+- `deckard (banco canónico)` | Informes Markdown, diagnósticos Rich, JSON, actas |
+| **Sincronización** | `deckard`, `callahan`, `dredd` | Validación cruzada, flags compartidos y autofix |
+
+### Pipeline de Integración Recomendado
+
+Podés encadenar `weyl` con otras herramientas del ecosistema en una única línea de comando:
+
+````{code-block} bash
+# Pipeline de integración típico
+weyl diff src/lista.c canon/lista.c --threshold 0.85
+````
+
