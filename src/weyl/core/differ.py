@@ -7,6 +7,11 @@ import re
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from weyl.core.alpha_equiv import (
+    detectar_equivalencia_for_while,
+    detectar_inversion_if_else,
+    normalizar_alpha_equivalencia,
+)
 from weyl.core.models import DiferenciaFuncion, ReporteSemanticDiff
 
 
@@ -47,7 +52,11 @@ def _extraer_mapa_funciones(contenido: str) -> Dict[str, str]:
     return funciones
 
 
-def comparar_archivos_c(archivo_estudiante: Path, archivo_modelo: Path) -> ReporteSemanticDiff:
+def comparar_archivos_c(
+    archivo_estudiante: Path,
+    archivo_modelo: Path,
+    normalizar_alpha: bool = False,
+) -> ReporteSemanticDiff:
     """Realiza una comparación semántica función por función entre dos archivos C."""
     txt_est = archivo_estudiante.read_text(encoding="utf-8", errors="ignore") if archivo_estudiante.is_file() else ""
     txt_mod = archivo_modelo.read_text(encoding="utf-8", errors="ignore") if archivo_modelo.is_file() else ""
@@ -79,9 +88,29 @@ def comparar_archivos_c(archivo_estudiante: Path, archivo_modelo: Path) -> Repor
                 cambios=["Función requerida ausente en el código del estudiante."],
             ))
         else:
-            matcher = difflib.SequenceMatcher(None, cuerpo_e, cuerpo_m)
+            c_e_cmp = normalizar_alpha_equivalencia(cuerpo_e) if normalizar_alpha else cuerpo_e
+            c_m_cmp = normalizar_alpha_equivalencia(cuerpo_m) if normalizar_alpha else cuerpo_m
+
+            matcher = difflib.SequenceMatcher(None, c_e_cmp, c_m_cmp)
             ratio = matcher.ratio()
-            estado = "IDENTICA" if ratio >= 0.99 else "MODIFICADA"
+
+            cambios_extra = []
+            if normalizar_alpha_equivalencia(cuerpo_e) == normalizar_alpha_equivalencia(cuerpo_m):
+                ratio = 1.0
+                estado = "IDENTICA"
+                cambios_extra.append("Equivalencia semántica pura (Alpha-Equivalence) comprobada.")
+            elif ratio >= 0.99:
+                estado = "IDENTICA"
+            else:
+                estado = "MODIFICADA"
+
+            if detectar_inversion_if_else(cuerpo_e, cuerpo_m):
+                cambios_extra.append("Lógica equivalente detectada con inversión de ramas if-else.")
+                ratio = max(ratio, 0.90)
+
+            if detectar_equivalencia_for_while(cuerpo_e, cuerpo_m):
+                cambios_extra.append("Transformación de bucle for/while semánticamente equivalente.")
+                ratio = max(ratio, 0.90)
 
             diff_lines = list(difflib.unified_diff(
                 cuerpo_m.splitlines(keepends=True),
@@ -90,13 +119,15 @@ def comparar_archivos_c(archivo_estudiante: Path, archivo_modelo: Path) -> Repor
                 tofile="estudiante",
             ))
 
+            cambios = cambios_extra + [l.strip() for l in diff_lines if l.startswith(("+", "-")) and not l.startswith(("+++", "---"))]
+
             diferencias.append(DiferenciaFuncion(
                 nombre=fn,
                 estado=estado,
                 lineas_estudiante=len(cuerpo_e.splitlines()),
                 lineas_modelo=len(cuerpo_m.splitlines()),
                 similitud=ratio,
-                cambios=[l.strip() for l in diff_lines if l.startswith(("+", "-")) and not l.startswith(("+++", "---"))],
+                cambios=cambios,
             ))
 
     return ReporteSemanticDiff(

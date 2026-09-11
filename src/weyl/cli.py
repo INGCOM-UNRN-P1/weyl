@@ -72,6 +72,7 @@ def diff_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
     side_by_side: bool = typer.Option(False, "--side-by-side", "-s", help="Visualizar comparación lado a lado en dos columnas."),
+    alpha_norm: bool = typer.Option(False, "--alpha", "-a", help="Activar normalización de identificadores (Alpha-Equivalence)."),
     json_output: bool = typer.Option(False, "--json", help="Salida en formato JSON."),
     output_md: Optional[Path] = typer.Option(None, "--md", "--output-md", "-o", help="Generar sección de reporte en formato Markdown para fusión en Dredd."),
 ) -> None:
@@ -83,7 +84,7 @@ def diff_cmd(
         err_console.print(f"[red]Error:[/red] No se encontró la solución modelo: '{modelo}'.")
         raise typer.Exit(code=2)
 
-    reporte = comparar_archivos_c(estudiante, modelo)
+    reporte = comparar_archivos_c(estudiante, modelo, normalizar_alpha=alpha_norm)
 
     if output_md:
         md_text = generar_seccion_markdown(reporte)
@@ -254,6 +255,118 @@ def export_html_cmd(
     reporte = comparar_archivos_c(estudiante, modelo)
     res = generar_html_diff(reporte, output)
     console.print(f"[bold green]✓ Reporte HTML interactivo generado en:[/bold green] [cyan]{res}[/cyan]")
+
+
+@app.command("ast-diff")
+def ast_diff_cmd(
+    estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
+    modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
+) -> None:
+    """Visualiza el árbol sintáctico y de diseño en formato jerárquico Rich."""
+    from weyl.core.ast_analyzer import generar_arbol_ast_diff
+    if not estudiante.is_file() or not modelo.is_file():
+        err_console.print("[red]Error:[/red] Uno o ambos archivos no existen.")
+        raise typer.Exit(code=2)
+    arbol = generar_arbol_ast_diff(estudiante, modelo)
+    console.print(arbol)
+
+
+@app.command("matrix")
+def matrix_cmd(
+    estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
+    modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
+) -> None:
+    """Genera la matriz cruzada de similitud función por función bajo Alpha-Equivalence."""
+    from weyl.core.matrix import calcular_matriz_similitud, renderizar_matriz_rich
+    if not estudiante.is_file() or not modelo.is_file():
+        err_console.print("[red]Error:[/red] Uno o ambos archivos no existen.")
+        raise typer.Exit(code=2)
+    matriz = calcular_matriz_similitud(estudiante, modelo)
+    renderizar_matriz_rich(matriz, console=console)
+
+
+@app.command("diff-project")
+def diff_project_cmd(
+    dir_estudiante: Path = typer.Argument(..., help="Directorio del proyecto del estudiante."),
+    dir_modelo: Path = typer.Argument(..., help="Directorio del proyecto modelo."),
+    json_output: bool = typer.Option(False, "--json", help="Emitir resultado en JSON."),
+) -> None:
+    """Realiza diffing semántico modular entre proyectos con múltiples archivos .c."""
+    from weyl.core.project_differ import comparar_directorios_modulares
+    if not dir_estudiante.is_dir() or not dir_modelo.is_dir():
+        err_console.print("[red]Error:[/red] Ambos caminos deben ser directorios válidos.")
+        raise typer.Exit(code=2)
+    res = comparar_directorios_modulares(dir_estudiante, dir_modelo)
+    if json_output:
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        return
+    tabla = Table(title=f"Comparación de Proyecto Modular: {dir_estudiante.name} vs {dir_modelo.name}")
+    tabla.add_column("Módulo", style="bold cyan")
+    tabla.add_column("Estado", justify="center")
+    tabla.add_column("Similitud", justify="right")
+    tabla.add_column("Detalle")
+    for m in res["modulos"]:
+        col = "green" if m["estado"] == "COINCIDENTE" else "yellow" if m["estado"] == "DIVERGENTE" else "red"
+        det = m.get("detalle") or f"Funciones: {m.get('funciones_estudiante')} vs {m.get('funciones_modelo')}"
+        tabla.add_row(m["archivo"], f"[{col}]{m['estado']}[/{col}]", f"{m['similitud']}%", det)
+    console.print(tabla)
+    console.print(f"[bold]Similitud promedio del proyecto:[/bold] [cyan]{res['similitud_promedio_pct']}%[/cyan]")
+
+
+@app.command("audit-memory")
+def audit_memory_cmd(
+    revision1: Path = typer.Argument(..., help="Directorio o archivo de la revisión 1."),
+    revision2: Path = typer.Argument(..., help="Directorio o archivo de la revisión 2."),
+    json_output: bool = typer.Option(False, "--json", help="Emitir resultado en JSON."),
+) -> None:
+    """Audita cambios en llamadas a malloc, calloc, realloc y free entre dos revisiones."""
+    from weyl.core.project_differ import auditar_gestion_memoria_revisiones
+    if not revision1.exists() or not revision2.exists():
+        err_console.print("[red]Error:[/red] Ambas rutas deben existir.")
+        raise typer.Exit(code=2)
+    res = auditar_gestion_memoria_revisiones(revision1, revision2)
+    if json_output:
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        return
+    tabla = Table(title="Auditoría de Gestión de Memoria entre Revisiones")
+    tabla.add_column("Revisión", style="bold cyan")
+    tabla.add_column("malloc / calloc / realloc", justify="center")
+    tabla.add_column("free()", justify="center")
+    tabla.add_column("Balance Neto", justify="right")
+    tabla.add_row("R1 (Previa)", f"{res['r1']['malloc']} / {res['r1']['calloc']} / {res['r1']['realloc']}", str(res['r1']['free']), str(res['r1']['balance_neto']))
+    tabla.add_row("R2 (Reentrega)", f"{res['r2']['malloc']} / {res['r2']['calloc']} / {res['r2']['realloc']}", str(res['r2']['free']), str(res['r2']['balance_neto']))
+    console.print(tabla)
+    color = "green" if res["mejora_balance"] else "yellow"
+    console.print(Panel(f"[{color}]{res['detalle']}[/{color}]", title="Diagnóstico de Evolución de Memoria", border_style=color))
+
+
+@app.command("check-plagiarism")
+def check_plagiarism_cmd(
+    entrega1: Path = typer.Argument(..., help="Código C de la primera entrega."),
+    entrega2: Path = typer.Argument(..., help="Código C de la segunda entrega."),
+    umbral: float = typer.Option(90.0, "--threshold", "-t", help="Umbral de similitud porcentual para sospecha de copia."),
+) -> None:
+    """Detecta plagio semántico resistente a renombramiento de variables y reordenamiento."""
+    from weyl.core.alpha_equiv import normalizar_alpha_equivalencia
+    import difflib
+    if not entrega1.is_file() or not entrega2.is_file():
+        err_console.print("[red]Error:[/red] Ambos archivos deben existir.")
+        raise typer.Exit(code=2)
+    txt1 = entrega1.read_text(encoding="utf-8", errors="replace")
+    txt2 = entrega2.read_text(encoding="utf-8", errors="replace")
+    norm1 = normalizar_alpha_equivalencia(txt1)
+    norm2 = normalizar_alpha_equivalencia(txt2)
+    ratio = difflib.SequenceMatcher(None, norm1, norm2).ratio() * 100.0
+
+    color = "red" if ratio >= umbral else "green"
+    console.print(Panel(
+        f"Similitud estructural (Alpha-Normalized): [bold {color}]{ratio:.1f}%[/bold {color}]\n"
+        f"Umbral de sospecha: [yellow]{umbral:.1f}%[/yellow]\n"
+        f"Diagnóstico: {'🚨 Alta probabilidad de copia semántica / ofuscación' if ratio >= umbral else '✓ Código suficientemente diferenciado'}",
+        title="Detección de Plagio Semántico",
+        border_style=color,
+    ))
+    raise typer.Exit(code=1 if ratio >= umbral else 0)
 
 
 def main() -> None:
