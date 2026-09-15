@@ -33,6 +33,7 @@ class ReporteSemanticDiff:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "schema_version": "1.0.0",
             "archivo_estudiante": str(self.archivo_estudiante),
             "archivo_modelo": str(self.archivo_modelo),
             "similitud_global": round(self.similitud_global, 2),

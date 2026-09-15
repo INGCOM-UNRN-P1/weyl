@@ -47,7 +47,10 @@ def main_callback(
 
 def generar_seccion_markdown(reporte) -> str:
     """Genera sección de comparación semántica y diffing estructural para Dredd."""
-    lines = ["## Comparación Semántica con Solución Canónica (Weyl)\n"]
+    lines = [
+        "<!-- dredd-section: weyl v1.0.0 -->\n",
+        "## Comparación Semántica con Solución Canónica (Weyl)\n",
+    ]
     lines.append(f"- **Archivo estudiante:** `{reporte.archivo_estudiante.name}`")
     lines.append(f"- **Archivo solución modelo:** `{reporte.archivo_modelo.name}`")
     lines.append(f"- **Similitud global:** `{reporte.similitud_global * 100:.1f}%`\n")
@@ -60,8 +63,10 @@ def generar_seccion_markdown(reporte) -> str:
         lines.append("| Función | Estado | Similitud | Líneas (Est / Mod) | Detalle de Diferencias |")
         lines.append("| :--- | :---: | :---: | :---: | :--- |")
         for d in reporte.funciones:
-            cambio_txt = d.cambios[0] if d.cambios else "Sin cambios"
-            lines.append(f"| `{d.nombre}()` | **{d.estado}** | {d.similitud * 100:.0f}% | {d.lineas_estudiante} / {d.lineas_modelo} | {cambio_txt} |")
+            cambio_raw = d.cambios[0] if d.cambios else "Sin cambios"
+            cambio_txt = cambio_raw.replace("|", "&#124;")
+            nom_limpio = d.nombre.replace("|", "&#124;")
+            lines.append(f"| `{nom_limpio}()` | **{d.estado}** | {d.similitud * 100:.0f}% | {d.lineas_estudiante} / {d.lineas_modelo} | {cambio_txt} |")
         lines.append("")
     return "\n".join(lines)
 
