@@ -7,7 +7,7 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 ## 🎯 Alcance
 
 ### Qué cubre
-- Comparación semántica y diffing estructural de código C basado en Abstract Syntax Trees (AST).
+- Comparación semántica y diffing estructural de código C por bloques y funciones.
 - Identificación de divergencias algorítmicas entre entregas de estudiantes y soluciones modelo canónicas.
 - Resistencia a técnicas de ofuscación de código: inmune a renombrado de variables, reordenamiento de funciones y cambios superficiales de formato.
 - Detección de copias y similitud semántica profunda entre códigos fuente.
@@ -25,7 +25,7 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 - Multiplataforma. Python >= 3.10.
 
 ### Dependencias Externas y Binarios
-- Ninguno obligatorio (análisis estático con Tree-Sitter AST).
+- Ninguno obligatorio (motor estático con análisis estructural por bloques/regex y soporte opcional para Tree-Sitter).
 
 ### Integración en el Ecosistema
 - CLI `weyl`. Plugin registrado en `ripley.plugins` (`semantic_diff`).
@@ -40,4 +40,16 @@ weyl diff estudiante.c modelo.c
 
 # 2. Salida estructurada JSON
 weyl diff estudiante.c modelo.c --json
+
+# 3. Comparar proyectos completos de múltiples archivos
+weyl diff-project dir_alumno/ dir_modelo/
+
+# 4. Auditoría de balance de memoria dinámica (malloc / free)
+weyl audit-memory estudiante.c
+
+# 5. Detección de similitud y copia profunda
+weyl check-plagiarism entrega1.c entrega2.c
+
+# 6. Diagnóstico del entorno y dependencias
+weyl doctor
 ```
