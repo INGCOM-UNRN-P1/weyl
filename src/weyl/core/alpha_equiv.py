@@ -45,6 +45,36 @@ def normalizar_alpha_equivalencia(codigo: str) -> str:
     return res
 
 
+# Negación de cada operador relacional.
+_NEGACION_RELACIONAL = {"==": "!=", "!=": "==", "<": ">=", ">=": "<", ">": "<=", "<=": ">"}
+_RELACIONAL = re.compile(r"^(.+?)(==|!=|<=|>=|<|>)(.+)$")
+
+
+def _son_condiciones_negadas(cond_a: str, cond_b: str) -> bool:
+    """True si una condición es exactamente la negación lógica de la otra.
+
+    Las variables se normalizan por posición, así que `x>5` y `y<=5` cuentan
+    como negadas (mismos operandos, operador opuesto), pero `x>5` y `y<=100`
+    no: los operandos difieren.
+    """
+    a = cond_a.replace(" ", "")
+    b = cond_b.replace(" ", "")
+    na, nb = normalizar_alpha_equivalencia(a), normalizar_alpha_equivalencia(b)
+
+    for x, y in ((na, nb), (nb, na)):
+        if x == normalizar_alpha_equivalencia(f"!({y})") or x == normalizar_alpha_equivalencia(f"!{y}"):
+            return True
+
+    ma, mb = _RELACIONAL.match(na), _RELACIONAL.match(nb)
+    if ma and mb:
+        return (
+            ma.group(1) == mb.group(1)
+            and ma.group(3) == mb.group(3)
+            and _NEGACION_RELACIONAL[ma.group(2)] == mb.group(2)
+        )
+    return False
+
+
 def detectar_inversion_if_else(cuerpo_a: str, cuerpo_b: str) -> bool:
     """Detecta si dos bloques condicionales representan lógica equivalente con condición invertida.
     
@@ -75,22 +105,12 @@ def detectar_inversion_if_else(cuerpo_a: str, cuerpo_b: str) -> bool:
     if not ramas_cruzadas:
         return False
 
-    # Verificar si una condición es la negación sintáctica de la otra
-    clean_cond_a = cond_a.replace(" ", "")
-    clean_cond_b = cond_b.replace(" ", "")
-
-    if clean_cond_a == f"!({clean_cond_b})" or clean_cond_b == f"!({clean_cond_a})":
-        return True
-    if clean_cond_a == f"!{clean_cond_b}" or clean_cond_b == f"!{clean_cond_a}":
-        return True
-    if ("==" in clean_cond_a and "!=" in clean_cond_b) or ("!=" in clean_cond_a and "==" in clean_cond_b):
-        return True
-    if ("<" in clean_cond_a and ">=" in clean_cond_b) or (">=" in clean_cond_a and "<" in clean_cond_b):
-        return True
-    if (">" in clean_cond_a and "<=" in clean_cond_b) or ("<=" in clean_cond_a and ">" in clean_cond_b):
-        return True
-
-    return True
+    # Con las ramas cruzadas, el resultado solo es equivalente si las
+    # condiciones son la NEGACIÓN una de la otra. El `return True` final que
+    # había antes convertía toda comparación de ramas cruzadas en "equivalente"
+    # (con `if(x>5){1}else{2}` vs `if(y<100){2}else{1}` inclusive), volviendo
+    # decorativas las verificaciones de negación anteriores.
+    return _son_condiciones_negadas(cond_a, cond_b)
 
 
 def detectar_equivalencia_for_while(cuerpo_a: str, cuerpo_b: str) -> bool:

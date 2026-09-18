@@ -12,21 +12,26 @@ from weyl.core.alpha_equiv import (
     detectar_inversion_if_else,
     normalizar_alpha_equivalencia,
 )
+from weyl.core.masking import blanquear_literales, eliminar_comentarios
 from weyl.core.models import DiferenciaFuncion, ReporteSemanticDiff
 
 
 def _eliminar_comentarios(texto: str) -> str:
-    pattern = re.compile(r'//.*?$|/\*.*?\*/', re.DOTALL | re.MULTILINE)
-    return re.sub(pattern, "", texto)
+    """Quita los comentarios sin tocar el contenido de los literales de cadena."""
+    return eliminar_comentarios(texto)
 
 
 def _extraer_mapa_funciones(contenido: str) -> Dict[str, str]:
     """Extrae un diccionario de {nombre_funcion: cuerpo_normalizado}."""
     codigo_limpio = _eliminar_comentarios(contenido)
+    # Copia con los literales blanqueados (misma longitud): los encabezados y el
+    # contador de llaves se buscan acá para que un `"{"` o un `"}"` dentro de un
+    # string no descuadre el conteo; el cuerpo se recorta del texto original.
+    codigo_ciego = blanquear_literales(codigo_limpio)
     re_fn = re.compile(r"^\s*(?:[a-zA-Z0-9_*]+\s+)+([a-zA-Z0-9_]+)\s*\([^)]*\)\s*\{", re.MULTILINE)
     funciones = {}
 
-    for m in re_fn.finditer(codigo_limpio):
+    for m in re_fn.finditer(codigo_ciego):
         fn_name = m.group(1)
         if fn_name in ("if", "for", "while", "switch"):
             continue
@@ -35,10 +40,10 @@ def _extraer_mapa_funciones(contenido: str) -> Dict[str, str]:
         brace_count = 0
         end_pos = start_pos
 
-        for i in range(start_pos, len(codigo_limpio)):
-            if codigo_limpio[i] == '{':
+        for i in range(start_pos, len(codigo_ciego)):
+            if codigo_ciego[i] == '{':
                 brace_count += 1
-            elif codigo_limpio[i] == '}':
+            elif codigo_ciego[i] == '}':
                 brace_count -= 1
                 if brace_count == 0:
                     end_pos = i
