@@ -1,4 +1,4 @@
-# ⚖️ WEYL — Diffing Semántico y Comparación AST en C
+# ⚖️ WEYL — Diffing Semántico y Comparación Estructural en C
 
 WEYL compara semánticamente dos archivos de código fuente C función por función, abstrayendo diferencias de espaciado para identificar qué funciones fueron agregadas, eliminadas o modificadas respecto a la solución modelo.
 
@@ -7,7 +7,7 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 ## 🎯 Alcance
 
 ### Qué cubre
-- Comparación semántica y diffing estructural de código C por bloques y funciones.
+- Comparación semántica y diffing estructural de código C por bloques y funciones. La extracción es textual (expresiones regulares y balanceo de llaves sobre el fuente sin comentarios ni literales): **no construye un AST** ni usa Tree-Sitter.
 - Identificación de divergencias algorítmicas entre entregas de estudiantes y soluciones modelo canónicas.
 - Resistencia a técnicas de ofuscación de código: inmune a renombrado de variables, reordenamiento de funciones y cambios superficiales de formato.
 - Detección de copias y similitud semántica profunda entre códigos fuente.
@@ -25,7 +25,7 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 - Multiplataforma. Python >= 3.10.
 
 ### Dependencias Externas y Binarios
-- Ninguno obligatorio (motor estático con análisis estructural por bloques/regex y soporte opcional para Tree-Sitter).
+- Ninguno obligatorio (motor estático con análisis estructural por bloques y regex).
 
 ### Integración en el Ecosistema
 - CLI `weyl`. Plugin registrado en `ripley.plugins` (`semantic_diff`).

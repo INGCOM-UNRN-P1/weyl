@@ -19,7 +19,7 @@ err_console = Console(stderr=True)
 
 app = typer.Typer(
     name="weyl",
-    help="⚖️ WEYL — Herramienta de diffing semántico y comparación estructural AST entre códigos C.",
+    help="⚖️ WEYL — Herramienta de diffing semántico y comparación estructural (por bloques y funciones) entre códigos C.",
     add_completion=True,
     no_args_is_help=True,
 )
@@ -141,11 +141,14 @@ def doctor_cmd() -> None:
     tabla.add_column("Estado", justify="center")
     tabla.add_column("Detalle")
 
-    try:
-        import tree_sitter_c
-        tabla.add_row("Tree-Sitter C Parser", "[bold green]✓ Operativo[/bold green]", "Gramática C AST disponible")
-    except Exception:
-        tabla.add_row("Motor Regex/AST", "[bold green]✓ Operativo[/bold green]", "Extractor sintáctico de funciones C activo")
+    # El motor no usa Tree-Sitter: extrae funciones con expresiones regulares y balanceo de
+    # llaves sobre el fuente enmascarado (sin comentarios ni literales). Un sondeo de
+    # `tree_sitter_c` marcaba "operativo" algo que weyl nunca consulta.
+    tabla.add_row(
+        "Extractor estructural",
+        "[bold green]✓ Operativo[/bold green]",
+        "Funciones y bloques por regex y balanceo de llaves (sin AST)",
+    )
 
     console.print(tabla)
 
@@ -267,7 +270,7 @@ def ast_diff_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
 ) -> None:
-    """Visualiza el árbol sintáctico y de diseño en formato jerárquico Rich."""
+    """Visualiza en formato jerárquico Rich el árbol de funciones y bloques (no es un AST del compilador)."""
     from weyl.core.ast_analyzer import generar_arbol_ast_diff
     if not estudiante.is_file() or not modelo.is_file():
         err_console.print("[red]Error:[/red] Uno o ambos archivos no existen.")

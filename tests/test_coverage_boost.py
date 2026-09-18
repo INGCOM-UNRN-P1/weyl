@@ -80,3 +80,25 @@ def test_cli_side_by_side_and_track(tmp_path):
     assert "Seguimiento Evolutivo" in res_track.stdout
     assert "MODIFICADA" in res_track.stdout
 
+
+
+def test_doctor_no_afirma_un_parser_que_weyl_no_usa():
+    """WEYL-D0301: el motor es regex + balanceo de llaves; el doctor sondeaba tree_sitter_c y decía
+    'Gramática C AST disponible' aunque el análisis nunca lo consulta."""
+    res = runner.invoke(app, ["doctor"])
+    assert "Tree-Sitter" not in res.stdout
+    assert "sin AST" in res.stdout
+
+
+def test_la_documentacion_no_declara_una_tecnica_que_no_se_usa():
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[1]
+    for archivo in ("README.md", "pyproject.toml"):
+        texto = (raiz / archivo).read_text(encoding="utf-8")
+        assert "Tree-Sitter AST" not in texto
+        assert "comparación estructural AST" not in texto
+    usa_tree_sitter = any(
+        "tree_sitter" in f.read_text(encoding="utf-8") for f in (raiz / "src" / "weyl").rglob("*.py")
+    )
+    assert not usa_tree_sitter or "Tree-Sitter" in (raiz / "README.md").read_text(encoding="utf-8")
