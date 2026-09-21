@@ -26,6 +26,7 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 
 ### Dependencias Externas y Binarios
 - Ninguno obligatorio (motor estático con análisis estructural por bloques y regex).
+- `giger` (opcional): `weyl detect-orphans` le pide el grafo de llamadas por `giger check --json` y, si no está instalado o no responde, usa su detector propio de funciones no invocadas.
 
 ### Integración en el Ecosistema
 - CLI `weyl`. Plugin registrado en `ripley.plugins` (`semantic_diff`).
