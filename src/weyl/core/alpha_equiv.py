@@ -113,19 +113,83 @@ def detectar_inversion_if_else(cuerpo_a: str, cuerpo_b: str) -> bool:
     return _son_condiciones_negadas(cond_a, cond_b)
 
 
-def detectar_equivalencia_for_while(cuerpo_a: str, cuerpo_b: str) -> bool:
-    """Detecta si un bucle while y un bucle for resuelven la misma lógica de iteración."""
-    tiene_for_a = "for (" in cuerpo_a or "for(" in cuerpo_a
-    tiene_while_a = "while (" in cuerpo_a or "while(" in cuerpo_a
-    tiene_for_b = "for (" in cuerpo_b or "for(" in cuerpo_b
-    tiene_while_b = "while (" in cuerpo_b or "while(" in cuerpo_b
+def _cierre(texto: str, abre: int, par: str) -> int:
+    """Índice del delimitador que cierra el que está en `abre` (-1 si no cierra)."""
+    cierra = {"(": ")", "{": "}"}[par]
+    nivel = 0
+    for k in range(abre, len(texto)):
+        if texto[k] == par:
+            nivel += 1
+        elif texto[k] == cierra:
+            nivel -= 1
+            if nivel == 0:
+                return k
+    return -1
 
-    # Uno debe contener for y el otro while
-    if (tiene_for_a and tiene_while_b) or (tiene_while_a and tiene_for_b):
-        norm_a = normalizar_alpha_equivalencia(cuerpo_a)
-        norm_b = normalizar_alpha_equivalencia(cuerpo_b)
-        # Extraer variables y operadores matemáticos principales
-        ops_a = sorted(re.findall(r"(\+\+|--|\+=|-=|\*=|/=|<=|>=|<|>|==|!=)", norm_a))
-        ops_b = sorted(re.findall(r"(\+\+|--|\+=|-=|\*=|/=|<=|>=|<|>|==|!=)", norm_b))
-        return ops_a == ops_b and len(ops_a) > 0
-    return False
+
+def _partes_del_encabezado(encabezado: str):
+    """Separa `init; cond; paso` respetando los paréntesis anidados."""
+    partes, nivel, actual = [], 0, ""
+    for c in encabezado:
+        if c == "(":
+            nivel += 1
+        elif c == ")":
+            nivel -= 1
+        if c == ";" and nivel == 0:
+            partes.append(actual.strip())
+            actual = ""
+        else:
+            actual += c
+    partes.append(actual.strip())
+    return partes if len(partes) == 3 else None
+
+
+def desazucarar_for_a_while(codigo: str) -> str:
+    """Reescribe cada `for (init; cond; paso) { cuerpo }` como `init; while (cond) { cuerpo paso; }`.
+
+    Solo trata los `for` con llaves y con el encabezado bien formado; los demás
+    quedan intactos, de modo que nunca se afirma una equivalencia que no se
+    pudo construir.
+    """
+    salida = codigo
+    inicio_busqueda = 0
+    while True:
+        m = re.compile(r"\bfor\s*\(").search(salida, inicio_busqueda)
+        if not m:
+            return salida
+        abre = m.end() - 1
+        cierra = _cierre(salida, abre, "(")
+        partes = _partes_del_encabezado(salida[abre + 1:cierra]) if cierra > 0 else None
+        resto = salida[cierra + 1:].lstrip() if cierra > 0 else ""
+        if not partes or not resto.startswith("{"):
+            inicio_busqueda = m.end()
+            continue
+        abre_cuerpo = len(salida) - len(resto)
+        cierra_cuerpo = _cierre(salida, abre_cuerpo, "{")
+        if cierra_cuerpo < 0:
+            inicio_busqueda = m.end()
+            continue
+        init, cond, paso = partes
+        cuerpo = salida[abre_cuerpo + 1:cierra_cuerpo].strip()
+        reemplazo = f"{init + '; ' if init else ''}while ({cond or '1'}) {{ {cuerpo} {paso + ';' if paso else ''} }}"
+        salida = salida[:m.start()] + reemplazo + salida[cierra_cuerpo + 1:]
+        inicio_busqueda = m.start()
+
+
+def detectar_equivalencia_for_while(cuerpo_a: str, cuerpo_b: str) -> bool:
+    """True si un `for` y un `while` son el mismo bucle escrito de dos maneras.
+
+    Antes bastaba con que ambos usaran los mismos operadores (`<`, `++`...),
+    de modo que `for (i<10; i++)` y un `while (j<20) { k++ }` cualquiera
+    contaban como equivalentes. Ahora el `for` se reescribe como `while`
+    (init antes, paso al final del cuerpo) y se exige que el texto resultante
+    sea alfa-equivalente al del otro código.
+    """
+    hay_for_a, hay_for_b = re.search(r"\bfor\s*\(", cuerpo_a), re.search(r"\bfor\s*\(", cuerpo_b)
+    hay_while_a, hay_while_b = re.search(r"\bwhile\s*\(", cuerpo_a), re.search(r"\bwhile\s*\(", cuerpo_b)
+    if not ((hay_for_a and hay_while_b) or (hay_while_a and hay_for_b)):
+        return False
+    a, b = desazucarar_for_a_while(cuerpo_a), desazucarar_for_a_while(cuerpo_b)
+    if a == cuerpo_a and b == cuerpo_b:
+        return False
+    return normalizar_alpha_equivalencia(a) == normalizar_alpha_equivalencia(b)
