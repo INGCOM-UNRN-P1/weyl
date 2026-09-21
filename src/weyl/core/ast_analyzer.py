@@ -189,3 +189,32 @@ def generar_arbol_ast_diff(archivo_estudiante: Path, archivo_modelo: Path) -> Tr
                 fn_node.add(f"📚 Primitivas libc: {', '.join(libc_info['libc'])}")
 
     return raiz
+
+
+def datos_ast_diff(archivo_estudiante: Path, archivo_modelo: Path) -> List[Dict[str, Any]]:
+    """Mismo análisis que `generar_arbol_ast_diff`, como datos serializables."""
+    txt_est = archivo_estudiante.read_text(encoding="utf-8", errors="replace") if archivo_estudiante.is_file() else ""
+    txt_mod = archivo_modelo.read_text(encoding="utf-8", errors="replace") if archivo_modelo.is_file() else ""
+    fns_est = _extraer_mapa_funciones(txt_est)
+    fns_mod = _extraer_mapa_funciones(txt_mod)
+
+    filas: List[Dict[str, Any]] = []
+    for fn in sorted(set(fns_est) | set(fns_mod)):
+        c_est, c_mod = fns_est.get(fn), fns_mod.get(fn)
+        if c_est and not c_mod:
+            filas.append({"funcion": fn, "estado": "AGREGADA",
+                          "modo_memoria": auditar_estructuras_intermedias(c_est)["modo_memoria"]})
+        elif not c_est and c_mod:
+            filas.append({"funcion": fn, "estado": "AUSENTE"})
+        else:
+            cf_est = analizar_estilo_control_flujo(c_est)["estilo_predominante"]
+            cf_mod = analizar_estilo_control_flujo(c_mod)["estilo_predominante"]
+            filas.append({
+                "funcion": fn,
+                "estado": "COMUN",
+                "distancia_pct": calcular_distancia_edicion(c_est, c_mod),
+                "estilo_estudiante": cf_est,
+                "estilo_modelo": cf_mod,
+                "libc": mapear_llamadas_libc_vs_propias(c_est)["libc"],
+            })
+    return filas

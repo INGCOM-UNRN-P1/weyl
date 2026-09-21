@@ -45,6 +45,17 @@ def main_callback(
     pass
 
 
+SCHEMA_VERSION = "1.0.0"
+JSON_OPT = "Emitir el resultado en JSON versionado (schema_version)."
+
+
+def _emitir_json(comando: str, datos: dict) -> None:
+    """Imprime `datos` como JSON con el envoltorio común de los comandos de weyl."""
+    payload = {"schema_version": SCHEMA_VERSION, "herramienta": "weyl", "comando": comando}
+    payload.update(datos)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
 def generar_seccion_markdown(reporte) -> str:
     """Genera sección de comparación semántica y diffing estructural para Dredd."""
     lines = [
@@ -99,7 +110,7 @@ def diff_cmd(
         raise typer.Exit(code=0)
 
     if json_output:
-        print(json.dumps(reporte.to_dict(), indent=2, ensure_ascii=False))
+        _emitir_json("diff", {k: v for k, v in reporte.to_dict().items() if k != "schema_version"})
         raise typer.Exit(code=0)
 
     if side_by_side:
@@ -134,8 +145,13 @@ def diff_cmd(
 
 
 @app.command("doctor")
-def doctor_cmd() -> None:
+def doctor_cmd(json_output: bool = typer.Option(False, "--json", help=JSON_OPT)) -> None:
     """Verifica el estado del entorno de diffing semántico WEYL."""
+    if json_output:
+        _emitir_json("doctor", {"ok": True, "componentes": [{
+            "componente": "Extractor estructural", "estado": "OK", "requerido": True,
+            "detalle": "Funciones y bloques por regex y balanceo de llaves (sin AST)"}]})
+        return
     tabla = Table(title="🏥 Diagnóstico del Entorno WEYL (doctor)", border_style="cyan")
     tabla.add_column("Componente", style="bold white")
     tabla.add_column("Estado", justify="center")
@@ -157,20 +173,35 @@ def doctor_cmd() -> None:
 def track_cmd(
     dir_r1: Path = typer.Argument(..., help="Directorio o archivo de la revisión inicial (r1)."),
     dir_r2: Path = typer.Argument(..., help="Directorio o archivo de la reentrega (r2)."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Analiza la evolución semántica y mejoras introducidas entre revisiones sucesivas de un estudiante."""
     if not dir_r1.exists() or not dir_r2.exists():
         err_console.print(f"[red]Error:[/red] No se encontraron una o ambas rutas de revisión: '{dir_r1}', '{dir_r2}'.")
         raise typer.Exit(code=2)
 
-    console.print(f"\n[bold cyan]📈 Seguimiento Evolutivo: {dir_r1.name} ➔ {dir_r2.name}[/bold cyan]\n")
+    if not json_output:
+        console.print(f"\n[bold cyan]📈 Seguimiento Evolutivo: {dir_r1.name} ➔ {dir_r2.name}[/bold cyan]\n")
 
     files_r1 = {f.name: f for f in (dir_r1.glob("*.c") if dir_r1.is_dir() else [dir_r1])}
     files_r2 = {f.name: f for f in (dir_r2.glob("*.c") if dir_r2.is_dir() else [dir_r2])}
 
     comunes = set(files_r1.keys()) & set(files_r2.keys())
     if not comunes:
+        if json_output:
+            _emitir_json("track", {"archivos": []})
+            return
         console.print("[yellow]No se encontraron archivos C coincidentes entre ambas revisiones.[/yellow]")
+        return
+
+    if json_output:
+        archivos = []
+        for fname in sorted(comunes):
+            rep = comparar_archivos_c(files_r1[fname], files_r2[fname])
+            archivos.append({"archivo": fname, "funciones": [
+                {"nombre": fn.nombre, "estado": fn.estado, "similitud": round(fn.similitud, 2),
+                 "cambios": fn.cambios[:5]} for fn in rep.funciones]})
+        _emitir_json("track", {"archivos": archivos})
         return
 
     tabla = Table(title="Evolución de Funciones entre Revisiones")
@@ -213,13 +244,16 @@ def report_cmd(
 def check_api_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Verifica que las firmas de funciones respeten los contratos y parámetros de la consigna."""
     from weyl.core.api_checker import comparar_firmas_api
     if not estudiante.is_file() or not modelo.is_file():
         err_console.print(f"[red]Error:[/red] Uno o ambos archivos no existen.")
         raise typer.Exit(code=2)
-    discrepancias = comparar_firmas_api(estudiante, modelo, console=console)
+    discrepancias = comparar_firmas_api(estudiante, modelo, console=Console(quiet=True) if json_output else console)
+    if json_output:
+        _emitir_json("check-api", {"ok": not discrepancias, "discrepancias": discrepancias})
     if discrepancias:
         raise typer.Exit(code=1)
 
@@ -228,25 +262,32 @@ def check_api_cmd(
 def check_complexity_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Detecta transformaciones algorítmicas, reducciones de anidación o cambio recursión/iteración."""
     from weyl.core.complexity import auditar_transformaciones_algoritmicas
     if not estudiante.is_file() or not modelo.is_file():
         err_console.print(f"[red]Error:[/red] Uno o ambos archivos no existen.")
         raise typer.Exit(code=2)
-    auditar_transformaciones_algoritmicas(estudiante, modelo, console=console)
+    transformaciones = auditar_transformaciones_algoritmicas(
+        estudiante, modelo, console=Console(quiet=True) if json_output else console)
+    if json_output:
+        _emitir_json("check-complexity", {"transformaciones": transformaciones})
 
 
 @app.command("detect-orphans")
 def detect_orphans_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante a auditar."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Detecta funciones auxiliares huérfanas o código muerto agregado en la entrega."""
     from weyl.core.orphan_detector import detectar_funciones_huerfanas
     if not estudiante.is_file():
         err_console.print(f"[red]Error:[/red] No se encontró el archivo: '{estudiante}'.")
         raise typer.Exit(code=2)
-    detectar_funciones_huerfanas(estudiante, console=console)
+    huerfanas = detectar_funciones_huerfanas(estudiante, console=Console(quiet=True) if json_output else console)
+    if json_output:
+        _emitir_json("detect-orphans", {"archivo": str(estudiante), "huerfanas": huerfanas})
 
 
 @app.command("export-html")
@@ -254,6 +295,7 @@ def export_html_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
     output: Path = typer.Option(Path("weyl_report.html"), "--output", "-o", help="Ruta de destino del reporte HTML interactivo."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Genera un reporte interactivo en formato HTML con diferencias semánticas."""
     from weyl.core.html_report import generar_html_diff
@@ -262,6 +304,9 @@ def export_html_cmd(
         raise typer.Exit(code=2)
     reporte = comparar_archivos_c(estudiante, modelo)
     res = generar_html_diff(reporte, output)
+    if json_output:
+        _emitir_json("export-html", {"salida": str(res), "similitud_global": round(reporte.similitud_global, 2)})
+        return
     console.print(f"[bold green]✓ Reporte HTML interactivo generado en:[/bold green] [cyan]{res}[/cyan]")
 
 
@@ -269,12 +314,17 @@ def export_html_cmd(
 def ast_diff_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Visualiza en formato jerárquico Rich el árbol de funciones y bloques (no es un AST del compilador)."""
     from weyl.core.ast_analyzer import generar_arbol_ast_diff
     if not estudiante.is_file() or not modelo.is_file():
         err_console.print("[red]Error:[/red] Uno o ambos archivos no existen.")
         raise typer.Exit(code=2)
+    if json_output:
+        from weyl.core.ast_analyzer import datos_ast_diff
+        _emitir_json("ast-diff", {"funciones": datos_ast_diff(estudiante, modelo)})
+        return
     arbol = generar_arbol_ast_diff(estudiante, modelo)
     console.print(arbol)
 
@@ -283,6 +333,7 @@ def ast_diff_cmd(
 def matrix_cmd(
     estudiante: Path = typer.Argument(..., help="Código C del estudiante."),
     modelo: Path = typer.Argument(..., help="Código C de la solución modelo."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Genera la matriz cruzada de similitud función por función bajo Alpha-Equivalence."""
     from weyl.core.matrix import calcular_matriz_similitud, renderizar_matriz_rich
@@ -290,6 +341,9 @@ def matrix_cmd(
         err_console.print("[red]Error:[/red] Uno o ambos archivos no existen.")
         raise typer.Exit(code=2)
     matriz = calcular_matriz_similitud(estudiante, modelo)
+    if json_output:
+        _emitir_json("matrix", {"matriz": matriz})
+        return
     renderizar_matriz_rich(matriz, console=console)
 
 
@@ -306,7 +360,7 @@ def diff_project_cmd(
         raise typer.Exit(code=2)
     res = comparar_directorios_modulares(dir_estudiante, dir_modelo)
     if json_output:
-        print(json.dumps(res, indent=2, ensure_ascii=False))
+        _emitir_json("diff-project", res)
         return
     tabla = Table(title=f"Comparación de Proyecto Modular: {dir_estudiante.name} vs {dir_modelo.name}")
     tabla.add_column("Módulo", style="bold cyan")
@@ -334,7 +388,7 @@ def audit_memory_cmd(
         raise typer.Exit(code=2)
     res = auditar_gestion_memoria_revisiones(revision1, revision2)
     if json_output:
-        print(json.dumps(res, indent=2, ensure_ascii=False))
+        _emitir_json("audit-memory", res)
         return
     tabla = Table(title="Auditoría de Gestión de Memoria entre Revisiones")
     tabla.add_column("Revisión", style="bold cyan")
@@ -353,6 +407,7 @@ def check_plagiarism_cmd(
     entrega1: Path = typer.Argument(..., help="Código C de la primera entrega."),
     entrega2: Path = typer.Argument(..., help="Código C de la segunda entrega."),
     umbral: float = typer.Option(90.0, "--threshold", "-t", help="Umbral de similitud porcentual para sospecha de copia."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
     """Detecta plagio semántico resistente a renombramiento de variables y reordenamiento."""
     from weyl.core.alpha_equiv import normalizar_alpha_equivalencia
@@ -365,6 +420,11 @@ def check_plagiarism_cmd(
     norm1 = normalizar_alpha_equivalencia(txt1)
     norm2 = normalizar_alpha_equivalencia(txt2)
     ratio = difflib.SequenceMatcher(None, norm1, norm2).ratio() * 100.0
+
+    if json_output:
+        _emitir_json("check-plagiarism", {"similitud_pct": round(ratio, 1), "umbral_pct": umbral,
+                                          "sospechoso": ratio >= umbral})
+        raise typer.Exit(code=1 if ratio >= umbral else 0)
 
     color = "red" if ratio >= umbral else "green"
     console.print(Panel(
