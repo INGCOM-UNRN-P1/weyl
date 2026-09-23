@@ -58,8 +58,9 @@ def _emitir_json(comando: str, datos: dict) -> None:
 
 def generar_seccion_markdown(reporte) -> str:
     """Genera sección de comparación semántica y diffing estructural para Dredd."""
+    status = "ok" if reporte.similitud_global >= 0.7 else "fail"
     lines = [
-        "<!-- dredd-section: weyl v1.0.0 -->\n",
+        f"<!-- dredd-section: weyl, tool=weyl, version=1.0.0, status={status} -->\n",
         "## Comparación Semántica con Solución Canónica (Weyl)\n",
     ]
     lines.append(f"- **Archivo estudiante:** `{reporte.archivo_estudiante.name}`")
