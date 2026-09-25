@@ -1,5 +1,7 @@
 # ⚖️ WEYL — Diffing Semántico y Comparación Estructural en C
 
+> 📖 **Manual de Usuario:** Para una guía exhaustiva de comandos, banderas, arquitectura y ejemplos, consultá el [Manual de Uso](MANUAL.md).
+
 WEYL compara semánticamente dos archivos de código fuente C función por función, abstrayendo diferencias de espaciado para identificar qué funciones fueron agregadas, eliminadas o modificadas respecto a la solución modelo.
 
 ---
