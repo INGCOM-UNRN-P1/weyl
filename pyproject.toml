@@ -45,13 +45,13 @@ weyl = "weyl.cli:main"
 [project.entry-points."ripley.plugins"]
 semantic_diff = "weyl.ripley_plugin:WeylPlugin"
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/weyl"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+]
