@@ -18,6 +18,7 @@ console = Console()
 err_console = Console(stderr=True)
 
 app = typer.Typer(
+    context_settings={"help_option_names": ["-h", "--help"]},
     name="weyl",
     help="⚖️ WEYL — Herramienta de diffing semántico y comparación estructural (por bloques y funciones) entre códigos C.",
     add_completion=True,
