@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List
 
+from weyl import __version__
 from weyl.core.differ import comparar_archivos_c
 
 
@@ -12,7 +13,7 @@ class WeylPlugin:
     """Plugin de diffing semántico y comparación estructural para Ripley."""
 
     name = "semantic_diff"
-    version = "0.1.0"
+    version = __version__
 
     def is_available(self) -> bool:
         return True
