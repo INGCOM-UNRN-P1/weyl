@@ -11,7 +11,7 @@ runner = CliRunner()
 def test_cli_version():
     res = runner.invoke(app, ["--version"])
     assert res.exit_code == 0
-    assert "WEYL" in res.stdout
+    assert res.stdout.startswith("weyl ")  # formato común de yutani: «nombre versión»
 
 
 def test_cli_diff_json(tmp_path):
