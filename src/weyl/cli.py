@@ -386,6 +386,38 @@ def audit_memory_cmd(
     console.print(Panel(f"[{color}]{res['detalle']}[/{color}]", title="Diagnóstico de Evolución de Memoria", border_style=color))
 
 
+@app.command("suggest")
+def suggest_cmd(
+    estudiante: Path = typer.Argument(..., help="Código C de la entrega."),
+    modelo: Path = typer.Argument(..., help="Solución modelo."),
+    docente: bool = typer.Option(False, "--docente", help="Confirmar que la salida es para el docente (se basa en la solución)."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
+) -> None:
+    """Sugerencias de refactorización comparando con la solución modelo (solo en modo docente)."""
+    if not docente:
+        err_console.print("[red]Error:[/red] estas sugerencias se basan en la solución modelo: son para el docente. "
+                          "Confirmalo con --docente.")
+        raise typer.Exit(code=2)
+    if not estudiante.is_file() or not modelo.is_file():
+        err_console.print("[red]Error:[/red] Ambos archivos deben existir.")
+        raise typer.Exit(code=2)
+    from weyl.core.sugerencias import sugerir
+
+    sugerencias = sugerir(estudiante, modelo)
+    if json_output:
+        _emitir_json("suggest", {"sugerencias": [s.__dict__ for s in sugerencias]})
+        return
+    if not sugerencias:
+        console.print("[green]Sin sugerencias: las funciones comunes tienen una estructura parecida a la solución.[/green]")
+        return
+    tabla = Table(title="Sugerencias de refactorización (solo docente)")
+    for col in ("Función", "Aspecto", "Detalle"):
+        tabla.add_column(col)
+    for s in sugerencias:
+        tabla.add_row(s.funcion, s.aspecto, s.detalle)
+    console.print(tabla)
+
+
 @app.command("similarity")
 def similarity_cmd(
     entrega1: Path = typer.Argument(..., help="Código C de la primera entrega."),

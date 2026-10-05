@@ -66,6 +66,7 @@ weyl doctor
 | [`weyl matrix`](#matrix) | Genera la matriz cruzada de similitud función por función bajo Alpha-Equivalence. |
 | [`weyl diff-project`](#diffproject) | Realiza diffing semántico modular entre proyectos con múltiples archivos .c. |
 | [`weyl audit-memory`](#auditmemory) | Audita cambios en llamadas a malloc, calloc, realloc y free entre dos revisiones. |
+| [`weyl suggest`](#suggest) | Sugerencias de refactorización comparando con la solución modelo (solo en modo docente, `--docente`). |
 | [`weyl similarity`](#similarity) | Similitud estructural entre dos archivos, resistente a renombrar variables y reordenar. |
 
 ### `weyl check`
