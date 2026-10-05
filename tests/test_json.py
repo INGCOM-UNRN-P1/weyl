@@ -54,8 +54,8 @@ def test_check_complexity_detect_orphans_matrix_ast_diff_track_export(tmp_path):
     salida = tmp_path / "r.html"
     assert _json(runner.invoke(app, ["export-html", e, m, "-o", str(salida), "--json"]))["salida"] == str(salida.resolve())
     assert _json(runner.invoke(app, ["doctor", "--json"]))["ok"] is True
-    res = runner.invoke(app, ["check-plagiarism", e, e, "--json"])
-    assert res.exit_code == 1 and _json(res)["sospechoso"] is True
+    res = runner.invoke(app, ["similarity", e, e, "--json"])
+    assert res.exit_code == 1 and _json(res)["similares"] is True and _json(res)["sospechoso"] is True
 
 
 def test_track_json_con_archivos_comunes(tmp_path):

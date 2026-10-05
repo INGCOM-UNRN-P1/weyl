@@ -386,14 +386,36 @@ def audit_memory_cmd(
     console.print(Panel(f"[{color}]{res['detalle']}[/{color}]", title="Diagnóstico de Evolución de Memoria", border_style=color))
 
 
-@app.command("check-plagiarism")
+@app.command("similarity")
+def similarity_cmd(
+    entrega1: Path = typer.Argument(..., help="Código C de la primera entrega."),
+    entrega2: Path = typer.Argument(..., help="Código C de la segunda entrega."),
+    umbral: float = typer.Option(90.0, "--threshold", "-t", help="Umbral de similitud porcentual para marcar los archivos como muy parecidos."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
+) -> None:
+    """Similitud estructural entre dos archivos, resistente a renombrar variables y reordenar.
+
+    Compara dos archivos. El plagio en una cohorte completa (todos contra todos, con informe) es
+    de `dredd plagiarism` (N-ECO-12).
+    """
+    _similitud(entrega1, entrega2, umbral, json_output, "similarity")
+
+
+@app.command("check-plagiarism", hidden=True)
 def check_plagiarism_cmd(
     entrega1: Path = typer.Argument(..., help="Código C de la primera entrega."),
     entrega2: Path = typer.Argument(..., help="Código C de la segunda entrega."),
     umbral: float = typer.Option(90.0, "--threshold", "-t", help="Umbral de similitud porcentual para sospecha de copia."),
     json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
 ) -> None:
-    """Detecta plagio semántico resistente a renombramiento de variables y reordenamiento."""
+    """Alias anterior de `weyl similarity` (se va a retirar)."""
+    err_console.print("[yellow]Aviso:[/yellow] `weyl check-plagiarism` pasa a llamarse `weyl similarity` (similitud "
+                      "estructural entre dos archivos); el plagio en una cohorte es de `dredd plagiarism`. "
+                      "Este alias se va a retirar.")
+    _similitud(entrega1, entrega2, umbral, json_output, "check-plagiarism")
+
+
+def _similitud(entrega1: Path, entrega2: Path, umbral: float, json_output: bool, comando: str) -> None:
     from weyl.core.alpha_equiv import normalizar_alpha_equivalencia
     import difflib
     if not entrega1.is_file() or not entrega2.is_file():
@@ -406,16 +428,17 @@ def check_plagiarism_cmd(
     ratio = difflib.SequenceMatcher(None, norm1, norm2).ratio() * 100.0
 
     if json_output:
-        _emitir_json("check-plagiarism", {"similitud_pct": round(ratio, 1), "umbral_pct": umbral,
-                                          "sospechoso": ratio >= umbral})
+        # `sospechoso` se conserva por compatibilidad; `similares` es el nombre nuevo.
+        _emitir_json(comando, {"similitud_pct": round(ratio, 1), "umbral_pct": umbral,
+                               "similares": ratio >= umbral, "sospechoso": ratio >= umbral})
         raise typer.Exit(code=1 if ratio >= umbral else 0)
 
     color = "red" if ratio >= umbral else "green"
     console.print(Panel(
-        f"Similitud estructural (Alpha-Normalized): [bold {color}]{ratio:.1f}%[/bold {color}]\n"
-        f"Umbral de sospecha: [yellow]{umbral:.1f}%[/yellow]\n"
-        f"Diagnóstico: {'🚨 Alta probabilidad de copia semántica / ofuscación' if ratio >= umbral else '✓ Código suficientemente diferenciado'}",
-        title="Detección de Plagio Semántico",
+        f"Similitud estructural (con nombres normalizados): [bold {color}]{ratio:.1f}%[/bold {color}]\n"
+        f"Umbral: [yellow]{umbral:.1f}%[/yellow]\n"
+        f"Resultado: {'🚨 Estructura casi idéntica: revisalo a mano (para toda la cohorte, `dredd plagiarism`)' if ratio >= umbral else '✓ Código suficientemente diferenciado'}",
+        title="Similitud estructural",
         border_style=color,
     ))
     raise typer.Exit(code=1 if ratio >= umbral else 0)

@@ -66,7 +66,7 @@ weyl doctor
 | [`weyl matrix`](#matrix) | Genera la matriz cruzada de similitud función por función bajo Alpha-Equivalence. |
 | [`weyl diff-project`](#diffproject) | Realiza diffing semántico modular entre proyectos con múltiples archivos .c. |
 | [`weyl audit-memory`](#auditmemory) | Audita cambios en llamadas a malloc, calloc, realloc y free entre dos revisiones. |
-| [`weyl check-plagiarism`](#checkplagiarism) | Detecta plagio semántico resistente a renombramiento de variables y reordenamiento. |
+| [`weyl similarity`](#similarity) | Similitud estructural entre dos archivos, resistente a renombrar variables y reordenar. |
 
 ### `weyl check`
 
@@ -328,9 +328,11 @@ Audita cambios en llamadas a malloc, calloc, realloc y free entre dos revisiones
 weyl audit-memory <revision1> <revision2>
 ```
 
-### `weyl check-plagiarism`
+### `weyl similarity`
 
-Detecta plagio semántico resistente a renombramiento de variables y reordenamiento.
+Similitud estructural entre dos archivos, resistente a renombrar variables y reordenar. Compara
+dos archivos; el plagio en una cohorte completa es de `dredd plagiarism`. El nombre anterior,
+`weyl check-plagiarism`, sigue andando con un aviso y se va a retirar.
 
 #### Argumentos
 | Argumento | Tipo | Descripción |
@@ -341,12 +343,12 @@ Detecta plagio semántico resistente a renombramiento de variables y reordenamie
 #### Opciones y Banderas
 | Opción / Banderas | Tipo | Por Defecto | Descripción |
 | :--- | :--- | :--- | :--- |
-| `--threshold`, `-t` | `float` | `90.0` | Umbral de similitud porcentual para sospecha de copia. |
+| `--threshold`, `-t` | `float` | `90.0` | Umbral de similitud porcentual para marcar los archivos como muy parecidos. |
 | `--json` | `bool` | `False` | Emitir el resultado en JSON versionado (schema_version). |
 
 #### Ejemplo de Invocación
 ```bash
-weyl check-plagiarism <entrega1> <entrega2>
+weyl similarity <entrega1> <entrega2>
 ```
 
 ---

@@ -51,7 +51,7 @@ weyl diff-project dir_alumno/ dir_modelo/
 weyl audit-memory estudiante.c
 
 # 5. Detección de similitud y copia profunda
-weyl check-plagiarism entrega1.c entrega2.c
+weyl similarity entrega1.c entrega2.c   # similitud estructural; el plagio de una cohorte es de `dredd plagiarism`
 
 # 6. Diagnóstico del entorno y dependencias
 weyl doctor
@@ -81,13 +81,13 @@ weyl doctor
 | `weyl matrix` | Genera la matriz cruzada de similitud función por función bajo Alpha-Equivalence. |
 | `weyl diff-project` | Realiza diffing semántico modular entre proyectos con múltiples archivos .c. |
 | `weyl audit-memory` | Audita cambios en llamadas a malloc, calloc, realloc y free entre dos revisiones. |
-| `weyl check-plagiarism` | Detecta plagio semántico resistente a renombramiento de variables y reordenamiento. |
+| `weyl similarity` | Similitud estructural entre dos archivos, resistente a renombrar variables y reordenar. |
 
 Ayuda de cada comando: `weyl <comando> -h`.
 
 ### Salida JSON
 
-Con `--json`, estos comandos emiten el resultado como JSON por la salida estándar, para usarlo desde scripts, ripley o dredd: `weyl check`, `weyl diff`, `weyl doctor`, `weyl track`, `weyl check-api`, `weyl check-complexity`, `weyl detect-orphans`, `weyl export-html`, `weyl ast-diff`, `weyl matrix`, `weyl diff-project`, `weyl audit-memory`, `weyl check-plagiarism`. El de `doctor --json` lleva `schema_version` y `ok`.
+Con `--json`, estos comandos emiten el resultado como JSON por la salida estándar, para usarlo desde scripts, ripley o dredd: `weyl check`, `weyl diff`, `weyl doctor`, `weyl track`, `weyl check-api`, `weyl check-complexity`, `weyl detect-orphans`, `weyl export-html`, `weyl ast-diff`, `weyl matrix`, `weyl diff-project`, `weyl audit-memory`, `weyl similarity`. El de `doctor --json` lleva `schema_version` y `ok`.
 
 ### Códigos de salida
 

@@ -145,6 +145,9 @@ def test_cli_check_plagiarism(tmp_path: Path):
     e2 = tmp_path / "e2.c"
     e1.write_text("int foo(int a, int b) { return a + b; }\n", encoding="utf-8")
     e2.write_text("int bar(int x, int y) { return x + y; }\n", encoding="utf-8")
-    res = runner.invoke(app, ["check-plagiarism", str(e1), str(e2), "--threshold", "95.0"])
+    res = runner.invoke(app, ["similarity", str(e1), str(e2), "--threshold", "95.0"])
     assert res.exit_code == 1
-    assert "Alta probabilidad de copia" in res.output
+    assert "Estructura casi idéntica" in res.output
+    # El nombre anterior sigue andando, con aviso de que pasa a `similarity` y a dredd.
+    res = runner.invoke(app, ["check-plagiarism", str(e1), str(e2), "--threshold", "95.0"])
+    assert res.exit_code == 1 and "dredd plagiarism" in res.output
