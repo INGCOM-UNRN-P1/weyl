@@ -173,6 +173,7 @@ def generar_arbol_ast_diff(archivo_estudiante: Path, archivo_modelo: Path) -> Tr
         elif not c_est and c_mod:
             raiz.add(f"[bold red]- {fn}()[/bold red] [dim](Función ausente en la entrega)[/dim]")
         else:
+            c_est, c_mod = c_est or "", c_mod or ""
             dist = calcular_distancia_edicion(c_est, c_mod)
             color = "green" if dist == 0 else "yellow" if dist < 30 else "magenta"
             fn_node = raiz.add(f"[{color}]~ {fn}()[/{color}] (Distancia AST: {dist:.1f}%)")
@@ -207,6 +208,7 @@ def datos_ast_diff(archivo_estudiante: Path, archivo_modelo: Path) -> List[Dict[
         elif not c_est and c_mod:
             filas.append({"funcion": fn, "estado": "AUSENTE"})
         else:
+            c_est, c_mod = c_est or "", c_mod or ""
             cf_est = analizar_estilo_control_flujo(c_est)["estilo_predominante"]
             cf_mod = analizar_estilo_control_flujo(c_mod)["estilo_predominante"]
             filas.append({

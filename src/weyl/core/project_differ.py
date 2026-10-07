@@ -36,6 +36,7 @@ def comparar_directorios_modulares(dir_estudiante: Path, dir_modelo: Path) -> Di
                 "detalle": "Archivo C requerido ausente en la entrega.",
             })
         else:
+            assert p_est is not None and p_mod is not None  # fname sale de la unión de ambos
             rep = comparar_archivos_c(p_est, p_mod)
             sim = rep.similitud_global
             similitudes.append(sim)

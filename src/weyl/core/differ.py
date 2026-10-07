@@ -93,6 +93,7 @@ def comparar_archivos_c(
                 cambios=["Función requerida ausente en el código del estudiante."],
             ))
         else:
+            cuerpo_e, cuerpo_m = cuerpo_e or "", cuerpo_m or ""
             c_e_cmp = normalizar_alpha_equivalencia(cuerpo_e) if normalizar_alpha else cuerpo_e
             c_m_cmp = normalizar_alpha_equivalencia(cuerpo_m) if normalizar_alpha else cuerpo_m
 
