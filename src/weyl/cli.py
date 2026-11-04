@@ -433,6 +433,47 @@ def similarity_cmd(
     _similitud(entrega1, entrega2, umbral, json_output, "similarity")
 
 
+@app.command("cohort")
+def cohort_cmd(
+    directorio: Path = typer.Argument(..., exists=True, file_okay=False, help="Carpeta con una subcarpeta (o un .c suelto) por entrega."),
+    umbral: float = typer.Option(90.0, "--threshold", "-t", min=0.0, max=100.0, help="Similitud (%) a partir de la cual dos entregas van al mismo grupo."),
+    plantilla: Optional[Path] = typer.Option(None, "--plantilla", exists=True, help="Código de la cátedra (archivo o carpeta) a descontar de cada entrega."),
+    comunes: float = typer.Option(0.5, "--comunes", min=0.0, max=1.0, help="Descontar lo que está en al menos esta fracción de las entregas (desde 4 entregas; 0 no descuenta)."),
+    csv_salida: Optional[Path] = typer.Option(None, "--csv", help="Escribir la matriz completa en este CSV."),
+    json_output: bool = typer.Option(False, "--json", help=JSON_OPT),
+) -> None:
+    """Matriz de similitud de un lote de entregas sobre el AST: todas contra todas.
+
+    Renombrar y reordenar funciones no cambia el resultado, y lo que comparte la mayoría del lote no
+    cuenta. Es un indicio para mirar a mano, no una prueba de copia. El informe de una cohorte evaluada es de `dredd cluster-errors --similitud`.
+    """
+    from weyl.core.similitud_ast import comparar_lote, entregas_de_directorio, matriz_csv
+
+    datos = comparar_lote(entregas_de_directorio(directorio), umbral=umbral, plantilla=plantilla, comunes=comunes)
+    if csv_salida:
+        csv_salida.parent.mkdir(parents=True, exist_ok=True)
+        csv_salida.write_text(matriz_csv(datos["matriz"]), encoding="utf-8")
+    if json_output:
+        _emitir_json("cohort", datos)
+        return
+    if not datos["entregas"]:
+        console.print(f"[yellow]No hay entregas con código C en {directorio}.[/yellow]")
+        return
+    if datos["grupos"]:
+        tabla = Table(title=f"Entregas parecidas (≥ {umbral:g} %)")
+        for columna in ("Grupo", "Entregas", "Similitud %"):
+            tabla.add_column(columna)
+        for i, grupo in enumerate(datos["grupos"], 1):
+            tabla.add_row(str(i), ", ".join(grupo["entregas"]), f"{grupo['similitud_min']:g}–{grupo['similitud_max']:g}")
+        console.print(tabla)
+    else:
+        console.print(f"[green]{datos['entregas']} entregas comparadas: ningún par supera el {umbral:g} %.[/green]")
+    if datos["sin_codigo"]:
+        console.print(f"[dim]Sin código propio para comparar: {', '.join(datos['sin_codigo'])}.[/dim]")
+    if csv_salida:
+        console.print(f"[dim]Matriz completa: {csv_salida}[/dim]")
+
+
 @app.command("check-plagiarism", hidden=True)
 def check_plagiarism_cmd(
     entrega1: Path = typer.Argument(..., help="Código C de la primera entrega."),

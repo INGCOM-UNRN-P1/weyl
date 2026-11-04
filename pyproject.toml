@@ -32,6 +32,9 @@ dependencies = [
     "typer>=0.9.0",
     "rich>=13.0.0",
     "pyyaml>=6.0",
+    # AST de la matriz de similitud de un lote (`weyl cohort`), con las cotas de giger y kaneda.
+    "tree-sitter>=0.25.0,<0.26",
+    "tree-sitter-c>=0.24.0",
     # Núcleo común del ecosistema (N-ECO-14): contrato de línea de comandos y textos en español.
     "yutani @ git+https://github.com/INGCOM-UNRN-P1/yutani@cf49348fae40d264006fe07dee2cc9e88dd9c934",
 ]

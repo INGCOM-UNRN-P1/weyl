@@ -9,7 +9,8 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 ## 🎯 Alcance
 
 ### Qué cubre
-- Comparación semántica y diffing estructural de código C por bloques y funciones. La extracción es textual (expresiones regulares y balanceo de llaves sobre el fuente sin comentarios ni literales): **no construye un AST** ni usa Tree-Sitter.
+- Comparación semántica y diffing estructural de código C por bloques y funciones. Esa extracción es textual (expresiones regulares y balanceo de llaves sobre el fuente sin comentarios ni literales).
+- Matriz de similitud de un lote de entregas sobre el AST (`weyl cohort`, con Tree-Sitter): renombrar y reordenar funciones no cambia el resultado.
 - Identificación de divergencias algorítmicas entre entregas de estudiantes y soluciones modelo canónicas.
 - Resistencia a técnicas de ofuscación de código: inmune a renombrado de variables, reordenamiento de funciones y cambios superficiales de formato.
 - Detección de copias y similitud semántica profunda entre códigos fuente.
@@ -27,7 +28,7 @@ WEYL compara semánticamente dos archivos de código fuente C función por funci
 - Multiplataforma. Python >= 3.10.
 
 ### Dependencias Externas y Binarios
-- Ninguno obligatorio (motor estático con análisis estructural por bloques y regex).
+- Ninguno obligatorio: Tree-Sitter y su gramática de C se instalan con el paquete.
 - `giger` (opcional): `weyl detect-orphans` le pide el grafo de llamadas por `giger check --json` y, si no está instalado o no responde, usa su detector propio de funciones no invocadas.
 
 ### Integración en el Ecosistema
@@ -53,6 +54,7 @@ weyl audit-memory estudiante.c
 # 5. Detección de similitud y copia profunda
 weyl similarity entrega1.c entrega2.c   # similitud estructural; el plagio de una cohorte es de `dredd plagiarism`
 weyl suggest entrega.c solucion.c --docente   # qué refactorizar, comparando con la solución (no muestra su código)
+weyl cohort entregas/ --plantilla catedra/ --csv matriz.csv   # todas contra todas sobre el AST; un indicio para mirar a mano
 
 # 6. Diagnóstico del entorno y dependencias
 weyl doctor
@@ -84,12 +86,13 @@ weyl doctor
 | `weyl audit-memory` | Audita cambios en llamadas a malloc, calloc, realloc y free entre dos revisiones. |
 | `weyl suggest` | Sugerencias de refactorización comparando con la solución modelo (solo en modo docente). |
 | `weyl similarity` | Similitud estructural entre dos archivos, resistente a renombrar variables y reordenar. |
+| `weyl cohort` | Matriz de similitud de un lote de entregas sobre el AST: todas contra todas. |
 
 Ayuda de cada comando: `weyl <comando> -h`.
 
 ### Salida JSON
 
-Con `--json`, estos comandos emiten el resultado como JSON por la salida estándar, para usarlo desde scripts, ripley o dredd: `weyl check`, `weyl diff`, `weyl doctor`, `weyl track`, `weyl check-api`, `weyl check-complexity`, `weyl detect-orphans`, `weyl export-html`, `weyl ast-diff`, `weyl matrix`, `weyl diff-project`, `weyl audit-memory`, `weyl suggest`, `weyl similarity`. El de `doctor --json` lleva `schema_version` y `ok`.
+Con `--json`, estos comandos emiten el resultado como JSON por la salida estándar, para usarlo desde scripts, ripley o dredd: `weyl check`, `weyl diff`, `weyl doctor`, `weyl track`, `weyl check-api`, `weyl check-complexity`, `weyl detect-orphans`, `weyl export-html`, `weyl ast-diff`, `weyl matrix`, `weyl diff-project`, `weyl audit-memory`, `weyl suggest`, `weyl similarity`, `weyl cohort`. El de `doctor --json` lleva `schema_version` y `ok`.
 
 ### Códigos de salida
 
