@@ -23,7 +23,9 @@ class WeylPlugin:
         if not modelo or not Path(modelo).is_file():
             return {"ok": True, "observaciones": []}
 
-        archivos = list(workspace.glob("*.c"))
+        # La solución puede estar en el mismo directorio: compararla consigo misma daba siempre bien, y
+        # glob no garantiza ningún orden.
+        archivos = sorted(a for a in workspace.glob("*.c") if a.resolve() != Path(modelo).resolve())
         if not archivos:
             return {"ok": True, "observaciones": []}
 

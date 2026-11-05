@@ -11,6 +11,15 @@ from weyl.ripley_plugin import WeylPlugin
 runner = CliRunner()
 
 
+def test_la_solucion_no_se_toma_por_la_entrega(tmp_path):
+    # El nombre ordena antes a la solución: con glob dependía del sistema de archivos.
+    canon = tmp_path / "a_solucion.c"
+    canon.write_text("int f(int a) { return a + 1; }\nvoid obligatoria() {}\n")
+    (tmp_path / "z_entrega.c").write_text("int f(int a) { return a + 2; }\n")
+
+    assert WeylPlugin().execute(tmp_path, {"solution_path": str(canon)})["ok"] is False
+
+
 def test_plugin_execution(tmp_path):
     p = WeylPlugin()
     assert p.is_available() is True
