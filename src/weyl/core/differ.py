@@ -115,7 +115,7 @@ def comparar_archivos_c(
                 ratio = max(ratio, 0.90)
 
             if detectar_equivalencia_for_while(cuerpo_e, cuerpo_m):
-                cambios_extra.append("Transformación de bucle for/while semánticamente equivalente.")
+                cambios_extra.append("Transformación de lazo for/while semánticamente equivalente.")
                 ratio = max(ratio, 0.90)
 
             diff_lines = list(difflib.unified_diff(

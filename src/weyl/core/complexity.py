@@ -61,7 +61,7 @@ def auditar_transformaciones_algoritmicas(
             transformaciones.append({
                 "funcion": fn,
                 "tipo": "Recursión → Iteración",
-                "descripcion": "El modelo utiliza recursión mientras que el estudiante implementó un bucle iterativo.",
+                "descripcion": "El modelo utiliza recursión mientras que el estudiante implementó un lazo iterativo.",
             })
         elif not rec_mod and rec_est:
             transformaciones.append({
@@ -77,7 +77,7 @@ def auditar_transformaciones_algoritmicas(
             transformaciones.append({
                 "funcion": fn,
                 "tipo": "Optimización Algorítmica (Menor anidación)",
-                "descripcion": f"Redujo la anidación de bucles de {nest_mod} (O(N^{nest_mod})) a {nest_est} (O(N^{nest_est})).",
+                "descripcion": f"Redujo la anidación de lazos de {nest_mod} (O(N^{nest_mod})) a {nest_est} (O(N^{nest_est})).",
             })
 
     tabla = Table(title=f"🧠 Transformaciones Algorítmicas Detectadas: {Path(archivo_estudiante).name}", border_style="cyan")
